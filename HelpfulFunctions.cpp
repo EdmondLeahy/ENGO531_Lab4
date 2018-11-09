@@ -85,7 +85,104 @@ void Write_Mat(char *FileName, MatrixXd &m, int decimal_precision) {
 	matfile << m;
 	matfile.close();
 	return;
-};
+}
+void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ransac_conf, double outlier_percentage, double min_iterations, double dThreshold)
+{
+	MatrixXd inliers, inlier_temp, temp;
+	MatrixXd xy_1, xy_2, inlier_ties1, inlier_ties2, xy1_temp, xy2_temp;
+
+
+	//First Photo Pair
+	int img_number1 = tie_pts(0, 0);
+	int img_number2 = tie_pts(1, 0);
+
+	//For printing
+	string outfilename;
+	char *outfilechar;
+
+	int counter = 0;
+	for (int i = 0; i < tie_pts.rows() / 2; i++) {
+
+		if (tie_pts(i * 2, 0) == img_number1 && tie_pts(i * 2 + 1, 0) == img_number2) {
+
+			if (tie_pts(i * 2, 1) == tie_pts(i * 2 + 1, 1)) {
+				//IMG1 matrix 
+				xy_1.conservativeResize(xy_1.rows() + 1, 3);
+				xy_2.conservativeResize(xy_2.rows() + 1, 3);
+				xy_1(counter, 0) = tie_pts(i * 2, 1);
+				xy_1(counter, 1) = tie_pts(i * 2, 2);
+				xy_1(counter, 2) = tie_pts(i * 2, 3);
+				//IMG2 matrix 
+				xy_2(counter, 0) = tie_pts(i * 2+1, 1);
+				xy_2(counter, 1) = tie_pts(i * 2+1, 2);
+				xy_2(counter, 2) = tie_pts(i * 2+1, 3);
+				counter++;
+				fprintf(stdout, "Working on image pair %i:%i\tPoint:\t%d\r", img_number1, img_number2, counter);
+			}
+
+		}
+		else {
+			fprintf(stdout, "\nFinished Pair.\n\n", img_number1, img_number2, counter);
+			//perform RANSAC
+			xy1_temp = xy_1;
+			xy2_temp = xy_2;
+			removeColumn(xy1_temp, 0);
+			removeColumn(xy2_temp, 0);
+
+			Vanilla_RANSAC(camera_params, xy1_temp, xy2_temp, ransac_conf, outlier_percentage, min_iterations, dThreshold, inlier_temp);
+			//Save inliers
+			FindInliers(inlier_temp, xy_1, xy_2, inlier_ties1, inlier_ties2);
+			//write to file
+			//img1
+			outfilename = "Inliers_Img" + to_string(img_number1) + to_string(img_number2) + "_" + to_string(img_number1) + ".txt";
+			outfilechar = new char[outfilename.length() + 1];
+			strcpy(outfilechar, outfilename.c_str());
+			Write_Mat(outfilechar, inlier_ties1, 4);
+			//img2
+			outfilename = "Inliers_Img" + to_string(img_number1) + to_string(img_number2) + "_" + to_string(img_number2) + ".txt";
+			outfilechar = new char[outfilename.length() + 1];
+			strcpy(outfilechar, outfilename.c_str());
+			Write_Mat(outfilechar, inlier_ties2, 4);
+			//Clear
+			counter = 0;
+			xy_1.resize(0, 3);
+			xy_2.resize(0, 3);
+
+			//Next Photo Pair
+			img_number1 = tie_pts(i * 2, 0);
+			img_number2 = tie_pts(i * 2 + 1, 0);
+
+
+		}
+	}
+
+
+	//Do one more ransac process
+	fprintf(stdout, "\nFinished Pair.\n\n", img_number1, img_number2, counter);
+	//perform RANSAC
+	xy1_temp = xy_1;
+	xy2_temp = xy_2;
+	removeColumn(xy1_temp, 0);
+	removeColumn(xy2_temp, 0);
+	Vanilla_RANSAC(camera_params, xy1_temp, xy2_temp, ransac_conf, outlier_percentage, min_iterations, dThreshold, inlier_temp);
+	//Save inliers
+	FindInliers(inlier_temp, xy_1, xy_2, inlier_ties1, inlier_ties2);
+	//write to file
+	//img1
+	outfilename = "Inliers_Img" + to_string(img_number1) + to_string(img_number2) + "_" + to_string(img_number1) + ".txt";
+	outfilechar = new char[outfilename.length() + 1];
+	strcpy(outfilechar, outfilename.c_str());
+	Write_Mat(outfilechar, inlier_ties1, 4);
+	//img2
+	outfilename = "Inliers_Img" + to_string(img_number1) + to_string(img_number2) + "_" + to_string(img_number2) + ".txt";
+	outfilechar = new char[outfilename.length() + 1];
+	strcpy(outfilechar, outfilename.c_str());
+	Write_Mat(outfilechar, inlier_ties2, 4);
+
+
+
+}
+;
 
 
 //////////////////////////////////////////////////////////////////
@@ -1209,6 +1306,28 @@ void Vanilla_RANSAC(CameraParam& camera_params, MatrixXd &xy_i1, MatrixXd &xy_i2
 	cout << endl;
 
 	return;
-};
+}
+void FindInliers(MatrixXd inliers, MatrixXd all_ties_1, MatrixXd all_ties_2, MatrixXd &inlier_ties1, MatrixXd &inlier_ties2)
+{	
+	inlier_ties1 = all_ties_1;
+	inlier_ties2 = all_ties_2;
+	if (inliers.rows() != all_ties_1.rows() || inliers.rows() != all_ties_2.rows()) {
+		cout << "\nERROR:The rows for inlier detection are not the same!\n";
+		return;
+
+	}
+	else {
+
+		for (int i = 0; i < inliers.rows(); i++) {
+
+			if (inliers(i, 0) != 1) { //point is an inlier
+				removeRow(inlier_ties1, i);
+				removeRow(inlier_ties2, i);
+			}
+		}
+		
+	}
+}
+;
 //////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////

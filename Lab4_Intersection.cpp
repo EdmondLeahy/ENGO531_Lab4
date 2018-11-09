@@ -4,13 +4,13 @@
 int main() {
 
 	//Constants
-	char infile[256] = "C:\\Users\\erleahy\\Documents\\Edmond\\531\\Lab4\\Edmond_Lab4_code\\ENGO531_Lab4_Intersection\\ENGO531_Lab4_Intersection\\AllTies_sparsesift.txt\\";
-	MatrixXd tie_pts;
-	double ransac_confidence = 1;
+	char infile[256] = ".\\AllTies_sparsesift.txt";
+	MatrixXd tie_pts, obs_01_img0, obs_02_img0, obs_01_img1, obs_12_img1, obs_02_img2, obs_12_img2;
+	double ransac_confidence = 0.95;
 	double outlier_percentage = 0.1;
-	int min_iterations = 100;
+	int min_iterations = 5;
 	double dThreshold = 1;
-
+	vector<int> indeces;
 
 
 
@@ -32,65 +32,17 @@ int main() {
 	camera_params.S1 = -0.002768610675315;
 	camera_params.S2 = -0.001364918105319;
 
+	//Perform ransac on image pairs:
+	SplitObs_and_RANSAC(camera_params, tie_pts, ransac_confidence, outlier_percentage, min_iterations, dThreshold);
 
-	//Perform RANSAC
-	MatrixXd inliers, inlier_temp, temp;
-	MatrixXd xy_1, xy_2;
-
-
-	//First indeces
-	double img_number1 = tie_pts(0, 0);
-	double img_number2 = tie_pts(1, 0);
-
-	double counter = 0;
-
-	for (int i = 0; i < tie_pts.rows()/2; i++) {
-
-		if (tie_pts(i * 2, 1) == img_number1 && tie_pts(i * 2 + 1, 1) == img_number2) {
-
-			if (tie_pts(i * 2, 1) == tie_pts(i * 2 + 1, 1)) {
-				//IMG1 matrix 
-				xy_1(counter, 0) = tie_pts(i * 2, 2);
-				xy_1(counter, 1) = tie_pts(i * 2, 3);
-				//IMG2 matrix 
-				xy_2(counter, 0) = tie_pts(i * 2+1, 2);
-				xy_2(counter, 1) = tie_pts(i * 2+1, 3);
-			}
-
-		}
-		else {
-
-			//perform RANSAC
-			Vanilla_RANSAC(camera_params, xy_1, xy_2, ransac_confidence, outlier_percentage, min_iterations, dThreshold, inlier_temp);
-			//Append
-			temp.resize(inliers.rows() + inlier_temp.rows(), inliers.cols());
-			temp << inliers, inlier_temp;
-			inliers = temp;
-			//Clear
-			xy_1.resize()
-
-
-			img_number1 = tie_pts(i*2, 0);
-			img_number2 = tie_pts(i*2+1, 0);
-
-
-		}
-	}
+	//Read in the ransacked image obs
+	Read_Mat("Inliers_Img01_0", obs_01_img0);
+	Read_Mat("Inliers_Img02_0", obs_02_img0);
+	Read_Mat("Inliers_Img01_1", obs_01_img1);
+	Read_Mat("Inliers_Img12_1", obs_01_img1);
+	Read_Mat("Inliers_Img02_2", obs_02_img2);
+	Read_Mat("Inliers_Img12_2", obs_12_img2);
 	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	return 0;
 
 }
