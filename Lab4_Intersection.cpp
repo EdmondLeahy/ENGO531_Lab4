@@ -6,7 +6,7 @@ int main() {
 	//Constants
 	char infile[256] = ".\\AllTies_sparsesift.txt";
 	MatrixXd tie_pts, obs_01_img0, obs_02_img0, obs_01_img1, obs_12_img1, obs_02_img2, obs_12_img2;
-	double ransac_confidence = 0.95;
+	double ransac_confidence = 1;
 	double outlier_percentage = 0.1;
 	int min_iterations = 5;
 	double dThreshold = 1;
@@ -36,12 +36,15 @@ int main() {
 	SplitObs_and_RANSAC(camera_params, tie_pts, ransac_confidence, outlier_percentage, min_iterations, dThreshold);
 
 	//Read in the ransacked image obs
-	Read_Mat("Inliers_Img01_0", obs_01_img0);
-	Read_Mat("Inliers_Img02_0", obs_02_img0);
-	Read_Mat("Inliers_Img01_1", obs_01_img1);
-	Read_Mat("Inliers_Img12_1", obs_01_img1);
-	Read_Mat("Inliers_Img02_2", obs_02_img2);
-	Read_Mat("Inliers_Img12_2", obs_12_img2);
+	Read_Mat(".\\Inliers_Img01_0.txt", obs_01_img0);
+	Read_Mat(".\\Inliers_Img02_0.txt", obs_02_img0);
+	Read_Mat(".\\Inliers_Img01_1.txt", obs_01_img1);
+	Read_Mat(".\\Inliers_Img12_1.txt", obs_01_img1);
+	Read_Mat(".\\Inliers_Img02_2.txt", obs_02_img2);
+	Read_Mat(".\\Inliers_Img12_2.txt", obs_12_img2);
+
+	//Find EOP
+
 	
 	return 0;
 
