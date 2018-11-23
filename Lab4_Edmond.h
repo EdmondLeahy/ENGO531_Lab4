@@ -20,19 +20,20 @@ using namespace Eigen;
 #define MaxMatSize 10000000
 #define pi 3.14159265358979323846 
 struct CameraParam {
-	double PS;
-	double f_l;
-	double xpp ;
-	double ypp;
-	double K1 ;
-	double K2 ;
-	double K3 ;
-	double P1 ;
-	double P2 ;
-	double S1 ;
-	double S2 ;
+	double PS; //pixel size
+	double f_l; //focal length
+	double xpp ; //principal point in x
+	double ypp; //principal point in y
+	double K1 ; //Distortion parameter
+	double K2 ;//Distortion parameter
+	double K3 ;//Distortion parameter
+	double P1 ;//Distortion parameter
+	double P2 ;//Distortion parameter
+	double S1 ;//Distortion parameter
+	double S2 ;//Distortion parameter
 	double Cn ;
 	double Rn ;
+	double sigma_obs; //observation standard deviation
 
 };
 struct RelativeOrientation {
@@ -54,6 +55,7 @@ typedef Matrix<double, Dynamic, 2> Matrixdby2;
 typedef Matrix<int, Dynamic, 2> Matrixdby2i;
 
 void perform_Ransac_RO(int pair, MatrixXd xy_1, MatrixXd xy_2, int img_number1, int img_number2);
+
 // Read and write function are modified versions of DMP_BBO library (TAKEN FROM DR.SHAHBAZI)
 void Read_Mat(char *FileName, MatrixXd& m);//reads a formatted file to a matrix
 void Write_Mat(char *FileName, MatrixXd & m, int decimal_precision); //writes a matrix to a formatted file
@@ -78,7 +80,23 @@ void Vanilla_RANSAC(CameraParam& camera_params, MatrixXd &xy_i1, MatrixXd &xy_i2
 
 void FindInliers(MatrixXd inliers, MatrixXd all_ties_1, MatrixXd all_ties_2, MatrixXd &inlier_ties1, MatrixXd &inlier_ties2);
 
-void intersection(CameraParam camera_params, MatrixXd xy_img1, MatrixXd xy_img2, MatrixXd xy_img3, RelativeOrientation RO1, RelativeOrientation RO2, RelativeOrientation RO3);
+// void intersection(CameraParam camera_params, MatrixXd xy_img1, MatrixXd xy_img2, MatrixXd xy_img3, RelativeOrientation RO1, RelativeOrientation RO2, RelativeOrientation RO3);
+
+void intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation ROP_1, RelativeOrientation ROP_2, CameraParam cam_params, string outfile_name);
+
+VectorXd calculatePlane(MatrixXd Points3);
+
+MatrixXd Compute_b(MatrixXd x_obs, MatrixXd ML, MatrixXd MR, double c, MatrixXd x_c);
+
+MatrixXd Compute_MR(double w, double phi, double k);
+
+MatrixXd Compute_Est(MatrixXd x_obs, MatrixXd ML, MatrixXd MR, double c);
+
+MatrixXd Compute_A(MatrixXd x_unk, MatrixXd ML, MatrixXd MR, double c, MatrixXd x_c);
+
+MatrixXd Compute_w(MatrixXd x_unk, MatrixXd ML, MatrixXd MR, double c, MatrixXd x_c);
+
+MatrixXd merge_Xobs(MatrixXd x1, MatrixXd x2);
 
 MatrixXd Compute_A_int(MatrixXd x_est, CameraParam params, RelativeOrientation RO1, RelativeOrientation RO2);
 

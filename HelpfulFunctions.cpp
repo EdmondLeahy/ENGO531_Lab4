@@ -1443,41 +1443,311 @@ void FindInliers(MatrixXd inliers, MatrixXd all_ties_1, MatrixXd all_ties_2, Mat
 };
 
 
-void intersection(CameraParam camera_params, MatrixXd xy_img1, MatrixXd xy_img2, MatrixXd xy_img3, RelativeOrientation RO1, RelativeOrientation RO2, RelativeOrientation RO3) {
-	VectorXd X_unk = VectorXd::Zero(3);
-	double n_points = xy_img1.rows();
-	MatrixXd a_int, estimatedPoints;
-	Matrix3b3 m_rot2;
-	VectorXd b_int;
-	int xij, yij, Xc2, Yc2, Zc2, counter; // indeces, x_obs, y_obs, Xo, Yo, Zo
+//void intersection(CameraParam camera_params, MatrixXd xy_img1, MatrixXd xy_img2, MatrixXd xy_img3, RelativeOrientation RO1, RelativeOrientation RO2, RelativeOrientation RO3) {
+//	VectorXd X_unk = VectorXd::Zero(3);
+//	double n_points = xy_img1.rows();
+//	MatrixXd a_int, estimatedPoints;
+//	Matrix3b3 m_rot2;
+//	VectorXd b_int;
+//	int xij, yij, Xc2, Yc2, Zc2, counter; // indeces, x_obs, y_obs, Xo, Yo, Zo
+//
+//
+//	//IOP
+//	double IO_scalfact = 0.1; //this is scale factor to balance the condition number of the normal-equations matrix
+//	double PS = camera_params.PS*IO_scalfact;
+//	double c = camera_params.f_l*IO_scalfact;
+//	double xpp = camera_params.xpp*IO_scalfact;
+//	double ypp = camera_params.ypp*IO_scalfact;
+//	double Cn = camera_params.Cn;
+//	double Rn = camera_params.Rn;
+//
+//	//Estimation of Points
+//	estimatedPoints = ComputeIntersectionEstimation(xy_img1, xy_img2, xy_img3, c, RO1, RO2, RO3);
+//
+//	//Iterations
+//	//while (0){
+//
+//		//Create the A matrix for this point
+//		//a_int = Compute_A_int(estimatedPoints, camera_params, RO1, RO2);
+//
+//
+//	//}
+//
+//
+//
+//};
+void intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation ROP_1, RelativeOrientation ROP_2, CameraParam cam_params, string outfile_name) {
+	int n_points = x_obs_1.rows(); //number of points in the intersection
 
 
-	//IOP
-	double IO_scalfact = 0.1; //this is scale factor to balance the condition number of the normal-equations matrix
-	double PS = camera_params.PS*IO_scalfact;
-	double c = camera_params.f_l*IO_scalfact;
-	double xpp = camera_params.xpp*IO_scalfact;
-	double ypp = camera_params.ypp*IO_scalfact;
-	double Cn = camera_params.Cn;
-	double Rn = camera_params.Rn;
+	//EOP
+	MatrixXd EOP(6,2); //Both EOP in one matrix (Xc, Yc, Zc, omega, phi, kappa)
+	EOP(0, 0) = ROP_1.bx; 
+	EOP(1, 0) = ROP_1.by; 
+	EOP(2, 0) = ROP_1.bz; 
+	EOP(3, 0) = ROP_1.omega;
+	EOP(4, 0) = ROP_1.phi;
+	EOP(5, 0) = ROP_1.kappa;
 
-	//Estimation of Points
-	estimatedPoints = ComputeIntersectionEstimation(xy_img1, xy_img2, xy_img3, c, RO1, RO2, RO3);
+	EOP(0, 1) = ROP_2.bx;
+	EOP(1, 1) = ROP_2.by;
+	EOP(2, 1) = ROP_2.bz;
+	EOP(3, 1) = ROP_2.omega;
+	EOP(4, 1) = ROP_2.phi;
+	EOP(5, 1) = ROP_2.kappa;
 
-	//Iterations
-	//while (0){
-
-		//Create the A matrix for this point
-		//a_int = Compute_A_int(estimatedPoints, camera_params, RO1, RO2);
-
-
-	//}
-
-
-
-};
+	// x_obs
+	//combine the observations in correct manner
+	MatrixXd x_obs(2*n_points,2); 
+	x_obs = merge_Xobs(x_obs_1, x_obs_2);
 
 
+	//output file
+	ofstream out;
+	out.open(outfile_name);
+
+	//create the matrix for the unknowns, x,y,z for each point
+	MatrixXd x_unk = MatrixXd::Zero(3, x_obs.rows() / 2);
+
+	MatrixXd P = MatrixXd::Zero(4, 4);
+	P(0, 0) = 1 / pow(cam_params.sigma_obs, 2);
+	P(1, 1) = 1 / pow(cam_params.sigma_obs, 2);
+	P(2, 2) = 1 / pow(cam_params.sigma_obs, 2);
+	P(3, 3) = 1 / pow(cam_params.sigma_obs, 2);
+
+
+	//cout << pow(cam_params.sigma_obs, 2) << "	" << cam_params.sigma_obs << "	" << endl << P << endl << endl;
+	MatrixXd Iden = MatrixXd::Identity(3, 3);
+	MatrixXd A = MatrixXd::Zero(4, 3);
+	MatrixXd w = MatrixXd::Zero(4, 1);
+	MatrixXd dx = MatrixXd::Zero(3, 1);
+
+	//cout << x_obs << endl << endl;
+
+	MatrixXd ComputedPoints(x_obs.rows() / 2, 3);
+	double itcount = 0;
+	for (int i = 0; i < x_obs.rows(); i = i + 2)//for all points
+	{
+		//cout << "Point: " << (i + 2) / 2 << endl << endl;
+		out << "------------------- " << "Point: " << (i + 2) / 2 << " -----------------" << endl << endl;
+		MatrixXd x_obs_pt = MatrixXd::Zero(4, 1);
+		x_obs_pt << x_obs(i, 0),
+			x_obs(i, 1),
+			x_obs(i + 1, 0),
+			x_obs(i + 1, 1);
+		//cout << x_obs_pt << endl;
+		//compute the rotation matrices for the Left image and the right image for the first point
+		MatrixXd ML = Compute_MR(EOP(3, 0)*pi / 180, EOP(4, 0)*pi / 180, EOP(5, 0)*pi / 180);
+		MatrixXd MR = Compute_MR(EOP(3, 1)*pi / 180, EOP(4, 1)*pi / 180, EOP(5, 1)*pi / 180);
+		//compute design matrix for the point
+		MatrixXd Est = Compute_Est(x_obs_pt, ML, MR, cam_params.f_l);	
+
+		//compute b matrix
+		MatrixXd x_c = MatrixXd::Zero(2, 3);
+		x_c << EOP(0, 0), EOP(1, 0), EOP(2, 0),
+			EOP(0, 1), EOP(1, 1), EOP(2, 1);
+		MatrixXd b = Compute_b(x_obs_pt, ML, MR, cam_params.f_l, x_c);
+
+		//compute initial estimate of the X, Y and Z of the point
+		x_unk = (Est.transpose()*Est).inverse()*Est.transpose()*b;
+		//cout << fixed << setprecision(7) <<"Approximate Values: " <<endl<< x_unk << endl<<endl;
+		out << fixed << setprecision(7) << "Approximate Values: " << endl << x_unk << endl << endl;
+		dx(0, 0) = 10000;
+		itcount = 0;
+		while (sqrt(pow(dx(0, 0), 2))>0.0000001 || sqrt(pow(dx(1, 0), 2))>0.0000001 || sqrt(pow(dx(2, 0), 2))>0.0000001 )
+		{	
+			if (itcount > 100) {
+				out << " \nERROR: DOES NOT CONVERTGE.\n";
+				break;
+			}
+			itcount++;
+			//cout << x_unk << endl << endl;
+			A = Compute_A(x_unk, ML, MR, cam_params.f_l, x_c);
+			//cout << fixed << setprecision(7) <<"Intermediate A matrix"<<endl<< A << endl << endl;
+			out << fixed << setprecision(7) << "Intermediate A matrix" << endl << A << endl << endl;
+			//w = x_obs_pt - A*x_unk;
+			MatrixXd w = x_obs_pt - Compute_w(x_unk, ML, MR, cam_params.f_l, x_c);
+			out << fixed << setprecision(7) << "Intermediate w matrix" << endl << w << endl << endl;
+			dx = -1 * (A.transpose()*P*A).inverse()*A.transpose()*P*w;
+			out<<fixed<<setprecision(7) << dx << endl << endl;
+
+			x_unk = x_unk - dx;
+		}
+
+		//Compute covariance matrix
+		MatrixXd Cx = (A.transpose()*P*A).inverse();
+
+		//cout << fixed << setprecision(15) << "Cx matrix" << endl << Cx << endl << endl << "Standard deviations:" << endl << sqrt(Cx(0, 0)) << endl << sqrt(Cx(1, 1)) << endl << sqrt(Cx(2, 2)) << endl << endl;
+		out << fixed << setprecision(6) << "Cx matrix" << endl << Cx << endl << endl << "Standard deviations:" << endl << sqrt(Cx(0, 0)) << endl << sqrt(Cx(1, 1)) << endl << sqrt(Cx(2, 2)) << endl << endl;
+
+		//compute redundancy numbers
+		//cout << P << endl << endl;
+		MatrixXd redun_num = (A*Cx*A.transpose()*P);
+		//cout << fixed << setprecision(6) << "Redundancy Numbers: " << endl << redun_num << endl << 1 - redun_num(0, 0) << endl << 1 - redun_num(1, 1) << endl << 1 - redun_num(2, 2) << endl << 1 - redun_num(3, 3) << endl;
+		out << fixed << setprecision(6) << "Redundancy Numbers: " << endl << redun_num << endl << 1 - redun_num(0, 0) << endl << 1 - redun_num(1, 1) << endl << 1 - redun_num(2, 2) << endl << 1 - redun_num(3, 3) << endl << 1 - redun_num(0, 0) + 1 - redun_num(1, 1) + 1 - redun_num(2, 2) + 1 - redun_num(3, 3) << endl;
+
+		//cout << "Final A matrix: "<<endl << A << endl << endl << "Final x_unk: " <<endl<< x_unk << endl << endl;// << "Final << x_obs_pt << endl << endl;
+		out << "Final x_unk: " << endl << x_unk << endl << endl;// << "Final << x_obs_pt << endl << endl;
+
+																//compute residuals
+		w = x_obs_pt - Compute_w(x_unk, ML, MR, cam_params.f_l, x_c);
+		MatrixXd v = redun_num * w - w;
+		//cout << "Residuals: " << endl << v << endl << endl << "----------" << endl;
+		out << "Residuals: " << endl << v << endl << endl << "---------------------------------------------" << endl;
+
+		//Place final points in Matrix
+		ComputedPoints(i / 2, 0) = x_unk(0);
+		ComputedPoints(i / 2, 1) = x_unk(1);
+		ComputedPoints(i / 2, 2) = x_unk(2);
+	}
+
+
+	//Determine intersecting plane
+	VectorXd planeParams = calculatePlane(ComputedPoints);
+	out << "\tThe plane of best fit: " << planeParams(0) << "X + " << planeParams(1)<< "Y + "<< planeParams(2) << " - Z = 0\n";
+
+
+	out << "----------\n" << "FINAL POINTS: \n" << ComputedPoints << "\n\n----------\n";
+
+	out.close();
+
+}
+VectorXd calculatePlane(MatrixXd Points3)
+{
+	int num_points = Points3.rows();
+	//Vector of results
+	VectorXd planeParams(3);
+	//Design matrix
+	MatrixXd A(num_points, 3);
+	//Observation Matrix
+	VectorXd w(num_points, 1);
+
+
+	for (int i = 0; i < num_points; i++) {
+		A(i, 0) = Points3(i, 0);
+		A(i, 1) = Points3(i, 1);
+		A(i, 2) = 1;
+		w(i, 0) = Points3(i, 2);
+	}
+	MatrixXd N = (A.transpose()*A).inverse();
+	MatrixXd U = (A.transpose()*w);
+
+	planeParams = N * U;
+
+	return planeParams;
+}
+;
+
+MatrixXd Compute_b(MatrixXd x_obs, MatrixXd ML, MatrixXd MR, double c, MatrixXd x_c)
+{
+	//x_obs should be image pt of left image x, y, right image x,y
+	//M should be the rotation matrix
+	//c should be the persepctive distance
+	//x_c should be the left image Xc, Yc, Zc; right image Xc, Yc, Zc
+
+	MatrixXd b = MatrixXd::Zero(4, 1);
+
+	b << (x_obs(0, 0)*ML(2, 0) + c * ML(0, 0))*x_c(0, 0) + (x_obs(0, 0)*ML(2, 1) + c * ML(0, 1))*x_c(0, 1) + (x_obs(0, 0)*ML(2, 2) + c * ML(0, 2))*x_c(0, 2),
+		(x_obs(1, 0)*ML(2, 0) + c * ML(1, 0))*x_c(0, 0) + (x_obs(1, 0)*ML(2, 1) + c * ML(1, 1))*x_c(0, 1) + (x_obs(1, 0)*ML(2, 2) + c * ML(1, 2))*x_c(0, 2),
+		(x_obs(2, 0)*MR(2, 0) + c * MR(0, 0))*x_c(1, 0) + (x_obs(2, 0)*MR(2, 1) + c * MR(0, 1))*x_c(1, 1) + (x_obs(2, 0)*MR(2, 2) + c * MR(0, 2))*x_c(1, 2),
+		(x_obs(3, 0)*MR(2, 0) + c * MR(1, 0))*x_c(1, 0) + (x_obs(3, 0)*MR(2, 1) + c * MR(1, 1))*x_c(1, 1) + (x_obs(3, 0)*MR(2, 2) + c * MR(1, 2))*x_c(1, 2);
+
+	return b;
+}
+
+MatrixXd Compute_MR(double w, double phi, double k)
+{
+	MatrixXd MR(3, 3);
+	//double w = x0(0, 0);
+	//double phi = x0(1, 0);
+	//double k = x0(2, 0);
+	MR(0, 0) = cos(phi)*cos(k);
+	MR(0, 1) = cos(w)*sin(k) + sin(w)*sin(phi)*cos(k);
+	MR(0, 2) = sin(w)*sin(k) - cos(w)*sin(phi)*cos(k);
+	MR(1, 0) = -cos(phi)*sin(k);
+	MR(1, 1) = cos(w)*cos(k) - sin(w)*sin(phi)*sin(k);
+	MR(1, 2) = sin(w)*cos(k) + cos(w)*sin(phi)*sin(k);
+	MR(2, 0) = sin(phi);
+	MR(2, 1) = -sin(w)*cos(phi);
+	MR(2, 2) = cos(w)*cos(phi);
+
+	return MR;
+}
+
+MatrixXd Compute_Est(MatrixXd x_obs, MatrixXd ML, MatrixXd MR, double c)
+{
+	//x_obs should be image pts of left image x, y, right image x,y
+	//M should be the rotation matrix
+	//c should be the persepctive distance
+
+	MatrixXd Est = MatrixXd::Zero(4, 3);
+
+	Est << x_obs(0, 0)*ML(2, 0) + c * ML(0, 0), x_obs(0, 0)*ML(2, 1) + c * ML(0, 1), x_obs(0, 0)*ML(2, 2) + c * ML(0, 2),
+		x_obs(1, 0)*ML(2, 0) + c * ML(1, 0), x_obs(1, 0)*ML(2, 1) + c * ML(1, 1), x_obs(1, 0)*ML(2, 2) + c * ML(1, 2),
+		x_obs(2, 0)*MR(2, 0) + c * MR(0, 0), x_obs(2, 0)*MR(2, 1) + c * MR(0, 1), x_obs(2, 0)*MR(2, 2) + c * MR(0, 2),
+		x_obs(3, 0)*MR(2, 0) + c * MR(1, 0), x_obs(3, 0)*MR(2, 1) + c * MR(1, 1), x_obs(3, 0)*MR(2, 2) + c * MR(1, 2);
+
+
+	return Est;
+}
+
+MatrixXd Compute_A(MatrixXd x_unk, MatrixXd ML, MatrixXd MR, double c, MatrixXd x_c)
+{
+	MatrixXd A = MatrixXd::Zero(4, 3);
+
+	double UL = ML(0, 0)*(x_unk(0, 0) - x_c(0, 0)) + ML(0, 1)*(x_unk(1, 0) - x_c(0, 1)) + ML(0, 2)*(x_unk(2, 0) - x_c(0, 2));
+	double WL = ML(2, 0)*(x_unk(0, 0) - x_c(0, 0)) + ML(2, 1)*(x_unk(1, 0) - x_c(0, 1)) + ML(2, 2)*(x_unk(2, 0) - x_c(0, 2));
+	double VL = ML(1, 0)*(x_unk(0, 0) - x_c(0, 0)) + ML(1, 1)*(x_unk(1, 0) - x_c(0, 1)) + ML(1, 2)*(x_unk(2, 0) - x_c(0, 2));
+
+	double UR = MR(0, 0)*(x_unk(0, 0) - x_c(1, 0)) + MR(0, 1)*(x_unk(1, 0) - x_c(1, 1)) + MR(0, 2)*(x_unk(2, 0) - x_c(1, 2));
+	double WR = MR(2, 0)*(x_unk(0, 0) - x_c(1, 0)) + MR(2, 1)*(x_unk(1, 0) - x_c(1, 1)) + MR(2, 2)*(x_unk(2, 0) - x_c(1, 2));
+	double VR = MR(1, 0)*(x_unk(0, 0) - x_c(1, 0)) + MR(1, 1)*(x_unk(1, 0) - x_c(1, 1)) + MR(1, 2)*(x_unk(2, 0) - x_c(1, 2));
+
+	A << (c / pow(WL, 2))*(ML(2, 0)*UL - ML(0, 0)*WL), (c / pow(WL, 2))*(ML(2, 1)*UL - ML(0, 1)*WL), (c / pow(WL, 2))*(ML(2, 2)*UL - ML(0, 2)*WL),
+		(c / pow(WL, 2))*(ML(2, 0)*VL - ML(1, 0)*WL), (c / pow(WL, 2))*(ML(2, 1)*VL - ML(1, 1)*WL), (c / pow(WL, 2))*(ML(2, 2)*VL - ML(1, 2)*WL),
+		(c / pow(WR, 2))*(MR(2, 0)*UR - MR(0, 0)*WR), (c / pow(WR, 2))*(MR(2, 1)*UR - MR(0, 1)*WR), (c / pow(WR, 2))*(MR(2, 2)*UR - MR(0, 2)*WR),
+		(c / pow(WR, 2))*(MR(2, 0)*VR - MR(1, 0)*WR), (c / pow(WR, 2))*(MR(2, 1)*VR - MR(1, 1)*WR), (c / pow(WR, 2))*(MR(2, 2)*VR - MR(1, 2)*WR);
+
+
+	return A;
+}
+
+MatrixXd Compute_w(MatrixXd x_unk, MatrixXd ML, MatrixXd MR, double c, MatrixXd x_c)
+{
+	MatrixXd w = MatrixXd::Zero(4, 1);
+
+	double UL = ML(0, 0)*(x_unk(0, 0) - x_c(0, 0)) + ML(0, 1)*(x_unk(1, 0) - x_c(0, 1)) + ML(0, 2)*(x_unk(2, 0) - x_c(0, 2));
+	double WL = ML(2, 0)*(x_unk(0, 0) - x_c(0, 0)) + ML(2, 1)*(x_unk(1, 0) - x_c(0, 1)) + ML(2, 2)*(x_unk(2, 0) - x_c(0, 2));
+	double VL = ML(1, 0)*(x_unk(0, 0) - x_c(0, 0)) + ML(1, 1)*(x_unk(1, 0) - x_c(0, 1)) + ML(1, 2)*(x_unk(2, 0) - x_c(0, 2));
+
+	double UR = MR(0, 0)*(x_unk(0, 0) - x_c(1, 0)) + MR(0, 1)*(x_unk(1, 0) - x_c(1, 1)) + MR(0, 2)*(x_unk(2, 0) - x_c(1, 2));
+	double WR = MR(2, 0)*(x_unk(0, 0) - x_c(1, 0)) + MR(2, 1)*(x_unk(1, 0) - x_c(1, 1)) + MR(2, 2)*(x_unk(2, 0) - x_c(1, 2));
+	double VR = MR(1, 0)*(x_unk(0, 0) - x_c(1, 0)) + MR(1, 1)*(x_unk(1, 0) - x_c(1, 1)) + MR(1, 2)*(x_unk(2, 0) - x_c(1, 2));
+
+	w << -c * UL / WL,
+		-c * VL / WL,
+		-c * UR / WR,
+		-c * VR / WR;
+
+
+	return w;
+}
+
+MatrixXd merge_Xobs(MatrixXd x1, MatrixXd x2)
+{
+	MatrixXd x_obs(2*x1.rows(),2);
+
+	for (int i = 0; i < x1.rows(); i++) {
+		x_obs(i * 2, 0) = x1(i, 0);   //First image obs
+		x_obs(i * 2, 1) = x1(i, 1);
+
+		x_obs(i * 2 + 1, 0) = x2(i, 0); //second image obs
+		x_obs(i * 2 + 1, 1) = x2(i, 1);
+
+	}
+	
+	return x_obs;
+}
 
 MatrixXd Compute_A_int(MatrixXd x_est, CameraParam params, RelativeOrientation RO1, RelativeOrientation RO2) {
 	MatrixXd A = MatrixXd::Zero(x_est.rows() * 2, 3);
