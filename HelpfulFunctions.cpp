@@ -132,6 +132,7 @@ void removeRow(MatrixXd& matrix, unsigned int rowToRemove) {
 	}
 };
 
+
 //////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////
 //Remove column number "colToRemove" form the matrix "Matrix".
@@ -563,7 +564,7 @@ void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ran
 
 
 
-void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ransac_conf, double outlier_percentage, double min_iterations, double dThreshold)
+void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ransac_conf, double outlier_percentage, double min_iterations, double dThreshold, double& pair_counter)
 {
 	MatrixXd inliers, inlier_temp, temp;
 	MatrixXd xy_1, xy_2, inlier_ties1, inlier_ties2, xy1_temp, xy2_temp;
@@ -577,6 +578,7 @@ void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ran
 	string outfilename;
 	char *outfilechar;
 
+	pair_counter = 0;
 	int counter = 0;
 	for (int i = 0; i < tie_pts.rows() / 2; i++) {
 
@@ -600,14 +602,20 @@ void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ran
 		}
 		else {
 			fprintf(stdout, "\nFinished Pair.\n\n", img_number1, img_number2, counter);
+			pair_counter++;
 			//perform RANSAC
 			xy1_temp = xy_1;
 			xy2_temp = xy_2;
 			removeColumn(xy1_temp, 0);
 			removeColumn(xy2_temp, 0);
 
+			//cout << "\nXYTemp1:\n" << xy1_temp << "\nXYTemp2:\n" << xy2_temp << endl;
+
+
 			Vanilla_RANSAC(camera_params, xy1_temp, xy2_temp, ransac_conf, outlier_percentage, min_iterations, dThreshold, inlier_temp);
 			//Save inliers
+			Write_Mat("Inliers_temp.txt", inlier_temp, 4);
+			Write_Mat("xy1_temp.txt", xy1_temp, 4);
 			FindInliers(inlier_temp, xy_1, xy_2, inlier_ties1, inlier_ties2);
 			//write to file
 			//img1
@@ -636,6 +644,7 @@ void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ran
 
 	//Do one more ransac process
 	fprintf(stdout, "\nFinished Pair.\n\n", img_number1, img_number2, counter);
+	pair_counter++;
 	//perform RANSAC
 	xy1_temp = xy_1;
 	xy2_temp = xy_2;
@@ -911,7 +920,7 @@ bool Decompose_Essential(CameraParam& camera_params, MatrixXd Emat, MatrixXd xy_
 
 		if (sumsign1>min_sum && sumsign2>min_sum) {
 			succeed_done = 1;
-			cout << "\n\tFrom Decomposition: solution# "<<i <<" is correct!"<< endl;
+			//cout << "\n\tFrom Decomposition: solution# "<<i <<" is correct!"<< endl;
 			Final_rotation = rot; //rotation form image 2 to image 1
 			Final_t = t; //direction of translation vector from image 1 to image 2
 			MatrixXd very_temp;
@@ -1145,7 +1154,7 @@ bool Perform_NonlinOri(CameraParam& camera_params, MatrixXd &xy_i1, MatrixXd &xy
 		qr = Temp.fullPivHouseholderQr();
 
 		if ((qr.rank())<7) {
-			cout << "Problem here! RANK!!!!!!!!!";
+			cout << "Problem here! RANK!!!!!!!!!\n";
 			success_done = 0;
 			break;
 		}
@@ -1178,7 +1187,7 @@ bool Perform_NonlinOri(CameraParam& camera_params, MatrixXd &xy_i1, MatrixXd &xy
 
 		//show the maximum correction to the RO parameters
 		//cout << "From ROP Estimation - > max deltaXcap=" << maxcorrection << endl;
-		fprintf(stdout, "From ROP Estimation - > max dletaXcap= %f\r", maxcorrection);
+		//fprintf(stdout, "From ROP Estimation - > max dletaXcap= %f\n", maxcorrection);
 	}//endof the adjustment loop
 
 	if (maxcorrection>1) {
@@ -1216,7 +1225,7 @@ double Rn ;
 //Given: a threshold on the residuals (dThreshold) to identify the outliers from inliers
 //Returns the Inliers_index, which is of the same length as "xy_i1" and "xy_i2". An elemnt of this vector
 //is 1 if the point is inlier and 0 otherwise
-void Vanilla_RANSAC(CameraParam& camera_params, MatrixXd &xy_i1, MatrixXd &xy_i2, double confidence_level, double outlier_percentage, int min_iterations, double dThreshold, MatrixXd& Inliers_index) {
+void Vanilla_RANSAC(CameraParam camera_params, MatrixXd &xy_i1, MatrixXd &xy_i2, double confidence_level, double outlier_percentage, int min_iterations, double dThreshold, MatrixXd& Inliers_index) {
 
 	//This is a scale factor for scaling the points coordinates to gain better condition number from the design matrix or the normal equations matrix
 	double IO_scalfact = 1;
@@ -1424,6 +1433,7 @@ void FindInliers(MatrixXd inliers, MatrixXd all_ties_1, MatrixXd all_ties_2, Mat
 {
 	inlier_ties1 = all_ties_1;
 	inlier_ties2 = all_ties_2;
+	int num_removed = 0;
 	if (inliers.rows() != all_ties_1.rows() || inliers.rows() != all_ties_2.rows()) {
 		cout << "\nERROR:The rows for inlier detection are not the same!\n";
 		return;
@@ -1433,9 +1443,10 @@ void FindInliers(MatrixXd inliers, MatrixXd all_ties_1, MatrixXd all_ties_2, Mat
 
 		for (int i = 0; i < inliers.rows(); i++) {
 
-			if (inliers(i, 0) != 1) { //point is an inlier
-				removeRow(inlier_ties1, i);
-				removeRow(inlier_ties2, i);
+			if (inliers(i, 0) != 1) { //point is an outlier
+				removeRow(inlier_ties1, i-num_removed);
+				removeRow(inlier_ties2, i-num_removed);
+				num_removed++;
 			}
 		}
 
@@ -1443,39 +1454,6 @@ void FindInliers(MatrixXd inliers, MatrixXd all_ties_1, MatrixXd all_ties_2, Mat
 };
 
 
-//void intersection(CameraParam camera_params, MatrixXd xy_img1, MatrixXd xy_img2, MatrixXd xy_img3, RelativeOrientation RO1, RelativeOrientation RO2, RelativeOrientation RO3) {
-//	VectorXd X_unk = VectorXd::Zero(3);
-//	double n_points = xy_img1.rows();
-//	MatrixXd a_int, estimatedPoints;
-//	Matrix3b3 m_rot2;
-//	VectorXd b_int;
-//	int xij, yij, Xc2, Yc2, Zc2, counter; // indeces, x_obs, y_obs, Xo, Yo, Zo
-//
-//
-//	//IOP
-//	double IO_scalfact = 0.1; //this is scale factor to balance the condition number of the normal-equations matrix
-//	double PS = camera_params.PS*IO_scalfact;
-//	double c = camera_params.f_l*IO_scalfact;
-//	double xpp = camera_params.xpp*IO_scalfact;
-//	double ypp = camera_params.ypp*IO_scalfact;
-//	double Cn = camera_params.Cn;
-//	double Rn = camera_params.Rn;
-//
-//	//Estimation of Points
-//	estimatedPoints = ComputeIntersectionEstimation(xy_img1, xy_img2, xy_img3, c, RO1, RO2, RO3);
-//
-//	//Iterations
-//	//while (0){
-//
-//		//Create the A matrix for this point
-//		//a_int = Compute_A_int(estimatedPoints, camera_params, RO1, RO2);
-//
-//
-//	//}
-//
-//
-//
-//};
 void intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation ROP_1, RelativeOrientation ROP_2, CameraParam cam_params, string outfile_name) {
 	int n_points = x_obs_1.rows(); //number of points in the intersection
 
@@ -1528,7 +1506,7 @@ void intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation ROP_1,
 	double itcount = 0;
 	for (int i = 0; i < x_obs.rows(); i = i + 2)//for all points
 	{
-		//cout << "Point: " << (i + 2) / 2 << endl << endl;
+		fprintf(stdout, "Intersecting point:\t%d\r", (i + 2) / 2);
 		out << "------------------- " << "Point: " << (i + 2) / 2 << " -----------------" << endl << endl;
 		MatrixXd x_obs_pt = MatrixXd::Zero(4, 1);
 		x_obs_pt << x_obs(i, 0),
@@ -1602,11 +1580,8 @@ void intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation ROP_1,
 	}
 
 
-	//Determine intersecting plane
-	VectorXd planeParams = calculatePlane(ComputedPoints);
-	out << "\tThe plane of best fit: " << planeParams(0) << "X + " << planeParams(1)<< "Y + "<< planeParams(2) << " - Z = 0\n";
 
-
+	//cout << "\n----------\n" << "FINAL POINTS: \n" << ComputedPoints << "\n\n----------\n";
 	out << "----------\n" << "FINAL POINTS: \n" << ComputedPoints << "\n\n----------\n";
 
 	out.close();
@@ -1833,6 +1808,50 @@ MatrixXd ComputeIntersectionEstimation(MatrixXd xy1, MatrixXd xy2, Matrix3d m_ro
 	}
 
 	return (A.transpose()*A).ldlt().solve(A.transpose()*b);
+
+}
+
+RelativeOrientation Approx_Planar(CameraParam cam_params, MatrixXd img_points, MatrixXd obj_points)
+{
+	RelativeOrientation ROP;
+	double x, y, X, Y, Z;
+	//STEP 1: DLT Design Matrix
+	MatrixXd A = MatrixXd::Zero(2 * img_points.rows(), 9);
+	for (int i = 0; i < img_points.rows(); i++) {
+		x = img_points(i, 1);
+		y = img_points(i, 2);
+		X = obj_points(i, 1);
+		Y = obj_points(i, 2);
+		A(i * 2, 0) = X;
+		A(i * 2, 1) = Y;
+		A(i * 2, 2) = 1;
+		A(i * 2, 3) = 0;
+		A(i * 2, 4) = 0;
+		A(i * 2, 5) = 0;
+		A(i * 2, 6) = -x*X;
+		A(i * 2, 7) = -x*Y;
+		A(i * 2, 7) = -x;
+
+		A(i * 2+1, 0) = 0;
+		A(i * 2+1, 1) = 0;
+		A(i * 2+1, 2) = 0;
+		A(i * 2+1, 3) = X;
+		A(i * 2+1, 4) = Y;
+		A(i * 2+1, 5) = 1;
+		A(i * 2+1, 6) = -y*X;
+		A(i * 2+1, 7) = -y*Y;
+		A(i * 2+1, 7) = -y;
+
+	}
+
+
+	//STEP 2: Perform SV Decomp
+
+	JacobiSVD<MatrixXd> svd(A, ComputeFullV);
+	MatrixXd V = svd.matrixV();
+
+	return ROP;
+
 
 }
 

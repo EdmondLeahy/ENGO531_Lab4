@@ -1,5 +1,5 @@
-#ifndef LAB4INTERSECTION
-#define LAB4INTERSECTION
+#ifndef LAB4_EDMOND
+#define LAB4_EDMOND
 
 #include <iostream>
 #include <Eigen\Dense> //for Eigen library
@@ -61,7 +61,7 @@ void Read_Mat(char *FileName, MatrixXd& m);//reads a formatted file to a matrix
 void Write_Mat(char *FileName, MatrixXd & m, int decimal_precision); //writes a matrix to a formatted file
 
 
-void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ransac_conf, double outlier_percentage, double min_iterations, double dThreshold);
+void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ransac_conf, double outlier_percentage, double min_iterations, double dThreshold, double& pair_counter);
 
 void Rotation_g2i(double Omega, double Phi, double Kappa, Matrix3b3 & Rot_g2i);
 
@@ -76,7 +76,7 @@ bool Decompose_Essential(CameraParam& camera_params, MatrixXd Emat, MatrixXd xy_
 
 bool Perform_NonlinOri(CameraParam& camera_params, MatrixXd &xy_i1, MatrixXd &xy_i2, MatrixXd& T21, double& Bx, double& By, double& Bz, double& Omega, double& Phi, double& Kappa);
 
-void Vanilla_RANSAC(CameraParam& camera_params, MatrixXd &xy_i1, MatrixXd &xy_i2, double confidence_level, double outlier_percentage, int min_iterations, double dThreshold, MatrixXd& Inliers_index);
+void Vanilla_RANSAC(CameraParam camera_params, MatrixXd &xy_i1, MatrixXd &xy_i2, double confidence_level, double outlier_percentage, int min_iterations, double dThreshold, MatrixXd& Inliers_index);
 
 void FindInliers(MatrixXd inliers, MatrixXd all_ties_1, MatrixXd all_ties_2, MatrixXd &inlier_ties1, MatrixXd &inlier_ties2);
 
@@ -101,5 +101,7 @@ MatrixXd merge_Xobs(MatrixXd x1, MatrixXd x2);
 MatrixXd Compute_A_int(MatrixXd x_est, CameraParam params, RelativeOrientation RO1, RelativeOrientation RO2);
 
 MatrixXd ComputeIntersectionEstimation(MatrixXd xy1, MatrixXd xy2, Matrix3d m_rot, double c, RelativeOrientation RO1, RelativeOrientation RO2, RelativeOrientation RO3);
+
+RelativeOrientation Approx_Planar(CameraParam cam_params, MatrixXd img_points, MatrixXd obj_points);
 
 #endif
