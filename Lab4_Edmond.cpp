@@ -3,7 +3,7 @@
 
 double ransac_confidence = 0.99;
 double outlier_percentage = 0.6;
-int min_iterations = 2000;
+int min_iterations = 200;
 double dThreshold = 1 * pow(10,-5);
 double num_pairs = 0;
 vector<RelativeOrientation> ROs;
@@ -14,14 +14,14 @@ MatrixXd Essential_mat;
 int main() {
 
 	//Constants
-	char infile[256] = ".\\AllTies_sparsesift_right.txt";
+	char infile[256] = ".\\AllTies_sparsesift_Kate.txt";
 	MatrixXd tie_pts, obs_01_img0, obs_02_img0, obs_01_img1, obs_12_img1, obs_02_img2, obs_12_img2;
 	
 
 	//Read in matrix
 	Read_Mat(infile, tie_pts);
-	// Define Camera Parameters
-	camera_params.PS = 0.008609300;
+	// Define Camera Parameters (JEFF)
+	/*camera_params.PS = 0.008609300;
 	camera_params.Cn = 2592.000000000;
 	camera_params.Rn = 1728.000000000;
 	camera_params.xpp = 0.056678826;
@@ -34,6 +34,22 @@ int main() {
 	camera_params.P2 = 0.000046157068436;
 	camera_params.S1 = -0.002768610675315;
 	camera_params.S2 = -0.001364918105319;
+	camera_params.sigma_obs = 0.8;
+*/
+	// Define Camera Parameters (KATE)
+	camera_params.PS = 0.00372;
+	camera_params.Cn = 6000.0;
+	camera_params.Rn = 4000.0;
+	camera_params.xpp = 0.000165124806008;
+	camera_params.ypp = - 0.000000237476973;
+	camera_params.f_l = 0.000000000062796;
+	camera_params.K1 = -0.000011690064009;
+	camera_params.K2 = -0.000006395424825;
+	camera_params.K3 = -0.000047133657656;
+	camera_params.P1 = -0.000014234944030;
+	camera_params.P2 = 0.066758636;
+	camera_params.S1 = 0.162602957;
+	camera_params.S2 = 24.736669359;
 	camera_params.sigma_obs = 0.8;
 
 
