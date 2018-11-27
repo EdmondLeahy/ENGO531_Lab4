@@ -564,10 +564,115 @@ void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ran
 
 
 
-void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ransac_conf, double outlier_percentage, double min_iterations, double dThreshold, double& pair_counter)
+//void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ransac_conf, double outlier_percentage, double min_iterations, double dThreshold, double& pair_counter)
+//{
+//	MatrixXd inliers, inlier_temp, temp;
+//	MatrixXd xy_1, xy_2, inlier_ties1, inlier_ties2, xy1_temp, xy2_temp;
+//
+//
+//	//First Photo Pair
+//	int img_number1 = tie_pts(0, 0);
+//	int img_number2 = tie_pts(1, 0);
+//
+//	//For printing
+//	string outfilename;
+//	char *outfilechar;
+//
+//	pair_counter = 0;
+//	int counter = 0;
+//	for (int i = 0; i < tie_pts.rows() / 2; i++) {
+//
+//		if (tie_pts(i * 2, 0) == img_number1 && tie_pts(i * 2 + 1, 0) == img_number2) {
+//
+//			if (tie_pts(i * 2, 1) == tie_pts(i * 2 + 1, 1)) {
+//				//IMG1 matrix 
+//				xy_1.conservativeResize(xy_1.rows() + 1, 3);
+//				xy_2.conservativeResize(xy_2.rows() + 1, 3);
+//				xy_1(counter, 0) = tie_pts(i * 2, 1);
+//				xy_1(counter, 1) = tie_pts(i * 2, 2);
+//				xy_1(counter, 2) = tie_pts(i * 2, 3);
+//				//IMG2 matrix 
+//				xy_2(counter, 0) = tie_pts(i * 2 + 1, 1);
+//				xy_2(counter, 1) = tie_pts(i * 2 + 1, 2);
+//				xy_2(counter, 2) = tie_pts(i * 2 + 1, 3);
+//				counter++;
+//				fprintf(stdout, "Working on image pair %i:%i\tPoint:\t%d\r", img_number1, img_number2, counter);
+//			}
+//
+//		}
+//		else {
+//			fprintf(stdout, "\nFinished Pair.\n\n", img_number1, img_number2, counter);
+//			pair_counter++;
+//			//perform RANSAC
+//			xy1_temp = xy_1;
+//			xy2_temp = xy_2;
+//			removeColumn(xy1_temp, 0);
+//			removeColumn(xy2_temp, 0);
+//
+//			//cout << "\nXYTemp1:\n" << xy1_temp << "\nXYTemp2:\n" << xy2_temp << endl;
+//
+//
+//			Vanilla_RANSAC(camera_params, xy1_temp, xy2_temp, ransac_conf, outlier_percentage, min_iterations, dThreshold, inlier_temp);
+//			//Save inliers
+//			Write_Mat("Inliers_temp.txt", inlier_temp, 4);
+//			Write_Mat("xy1_temp.txt", xy1_temp, 4);
+//			FindInliers(inlier_temp, xy_1, xy_2, inlier_ties1, inlier_ties2);
+//			//write to file
+//			//img1
+//			outfilename = "Inliers_Img" + to_string(img_number1) + to_string(img_number2) + "_" + to_string(img_number1) + ".txt";
+//			outfilechar = new char[outfilename.length() + 1];
+//			strcpy(outfilechar, outfilename.c_str());
+//			Write_Mat(outfilechar, inlier_ties1, 4);
+//			//img2
+//			outfilename = "Inliers_Img" + to_string(img_number1) + to_string(img_number2) + "_" + to_string(img_number2) + ".txt";
+//			outfilechar = new char[outfilename.length() + 1];
+//			strcpy(outfilechar, outfilename.c_str());
+//			Write_Mat(outfilechar, inlier_ties2, 4);
+//			//Clear
+//			counter = 0;
+//			xy_1.resize(0, 3);
+//			xy_2.resize(0, 3);
+//
+//			//Next Photo Pair
+//			img_number1 = tie_pts(i * 2, 0);
+//			img_number2 = tie_pts(i * 2 + 1, 0);
+//
+//
+//		}
+//	}
+//
+//
+//	//Do one more ransac process
+//	fprintf(stdout, "\nFinished Pair.\n\n", img_number1, img_number2, counter);
+//	pair_counter++;
+//	//perform RANSAC
+//	xy1_temp = xy_1;
+//	xy2_temp = xy_2;
+//	removeColumn(xy1_temp, 0);
+//	removeColumn(xy2_temp, 0);
+//	Vanilla_RANSAC(camera_params, xy1_temp, xy2_temp, ransac_conf, outlier_percentage, min_iterations, dThreshold, inlier_temp);
+//	//Save inliers
+//	FindInliers(inlier_temp, xy_1, xy_2, inlier_ties1, inlier_ties2);
+//	//write to file
+//	//img1
+//	outfilename = "Inliers_Img" + to_string(img_number1) + to_string(img_number2) + "_" + to_string(img_number1) + ".txt";
+//	outfilechar = new char[outfilename.length() + 1];
+//	strcpy(outfilechar, outfilename.c_str());
+//	Write_Mat(outfilechar, inlier_ties1, 4);
+//	//img2
+//	outfilename = "Inliers_Img" + to_string(img_number1) + to_string(img_number2) + "_" + to_string(img_number2) + ".txt";
+//	outfilechar = new char[outfilename.length() + 1];
+//	strcpy(outfilechar, outfilename.c_str());
+//	Write_Mat(outfilechar, inlier_ties2, 4);
+//
+//
+//
+//}
+void SplitObs(CameraParam camera_params, MatrixXd tie_pts, vector<MatrixXd>& all_split_obs, MatrixXd& img_indeces)
 {
 	MatrixXd inliers, inlier_temp, temp;
 	MatrixXd xy_1, xy_2, inlier_ties1, inlier_ties2, xy1_temp, xy2_temp;
+	img_indeces = MatrixXd(0, 0);
 
 
 	//First Photo Pair
@@ -577,8 +682,7 @@ void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ran
 	//For printing
 	string outfilename;
 	char *outfilechar;
-
-	pair_counter = 0;
+	int num_pairs = 0;
 	int counter = 0;
 	for (int i = 0; i < tie_pts.rows() / 2; i++) {
 
@@ -597,38 +701,22 @@ void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ran
 				xy_2(counter, 2) = tie_pts(i * 2 + 1, 3);
 				counter++;
 				fprintf(stdout, "Working on image pair %i:%i\tPoint:\t%d\r", img_number1, img_number2, counter);
+				//cout << xy_1 << endl;
 			}
 
 		}
 		else {
 			fprintf(stdout, "\nFinished Pair.\n\n", img_number1, img_number2, counter);
-			pair_counter++;
-			//perform RANSAC
-			xy1_temp = xy_1;
-			xy2_temp = xy_2;
-			removeColumn(xy1_temp, 0);
-			removeColumn(xy2_temp, 0);
+			// Pushback vector of observations
+			all_split_obs.push_back(xy_1);
+			all_split_obs.push_back(xy_2);
+			// add the indeces to img list
+			img_indeces.conservativeResize(img_indeces.rows() + 1, 2);
+			img_indeces(num_pairs, 0) = img_number1;
+			img_indeces(num_pairs, 1) = img_number2;
+			num_pairs++;
 
-			//cout << "\nXYTemp1:\n" << xy1_temp << "\nXYTemp2:\n" << xy2_temp << endl;
-
-
-			Vanilla_RANSAC(camera_params, xy1_temp, xy2_temp, ransac_conf, outlier_percentage, min_iterations, dThreshold, inlier_temp);
-			//Save inliers
-			Write_Mat("Inliers_temp.txt", inlier_temp, 4);
-			Write_Mat("xy1_temp.txt", xy1_temp, 4);
-			FindInliers(inlier_temp, xy_1, xy_2, inlier_ties1, inlier_ties2);
-			//write to file
-			//img1
-			outfilename = "Inliers_Img" + to_string(img_number1) + to_string(img_number2) + "_" + to_string(img_number1) + ".txt";
-			outfilechar = new char[outfilename.length() + 1];
-			strcpy(outfilechar, outfilename.c_str());
-			Write_Mat(outfilechar, inlier_ties1, 4);
-			//img2
-			outfilename = "Inliers_Img" + to_string(img_number1) + to_string(img_number2) + "_" + to_string(img_number2) + ".txt";
-			outfilechar = new char[outfilename.length() + 1];
-			strcpy(outfilechar, outfilename.c_str());
-			Write_Mat(outfilechar, inlier_ties2, 4);
-			//Clear
+			//Clear and set counter back to 0
 			counter = 0;
 			xy_1.resize(0, 3);
 			xy_2.resize(0, 3);
@@ -639,33 +727,40 @@ void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ran
 
 
 		}
+
 	}
 
-
-	//Do one more ransac process
 	fprintf(stdout, "\nFinished Pair.\n\n", img_number1, img_number2, counter);
-	pair_counter++;
-	//perform RANSAC
-	xy1_temp = xy_1;
-	xy2_temp = xy_2;
-	removeColumn(xy1_temp, 0);
-	removeColumn(xy2_temp, 0);
-	Vanilla_RANSAC(camera_params, xy1_temp, xy2_temp, ransac_conf, outlier_percentage, min_iterations, dThreshold, inlier_temp);
-	//Save inliers
-	FindInliers(inlier_temp, xy_1, xy_2, inlier_ties1, inlier_ties2);
-	//write to file
-	//img1
-	outfilename = "Inliers_Img" + to_string(img_number1) + to_string(img_number2) + "_" + to_string(img_number1) + ".txt";
-	outfilechar = new char[outfilename.length() + 1];
-	strcpy(outfilechar, outfilename.c_str());
-	Write_Mat(outfilechar, inlier_ties1, 4);
-	//img2
-	outfilename = "Inliers_Img" + to_string(img_number1) + to_string(img_number2) + "_" + to_string(img_number2) + ".txt";
-	outfilechar = new char[outfilename.length() + 1];
-	strcpy(outfilechar, outfilename.c_str());
-	Write_Mat(outfilechar, inlier_ties2, 4);
+	// Pushback vector of last observations
+	all_split_obs.push_back(xy_1);
+	all_split_obs.push_back(xy_2);
+	// add the indeces to img list
+	img_indeces.conservativeResize(img_indeces.rows() + 1, 2);
+	img_indeces(num_pairs, 0) = img_number1;
+	img_indeces(num_pairs, 1) = img_number2;
+	num_pairs++;
+}
+void Ransac_All_obs(CameraParam camera_params, vector<MatrixXd>& all_split_obs, double ransac_conf, double outlier_percentage, double min_iterations, double dThreshold)
+{
+	int num_pairs = all_split_obs.size() / 2;
+	MatrixXd xy1_temp, xy2_temp, inliers, inliers1, inliers2;
+	vector<MatrixXd> all_split_obs_inliers;
+	
+	for (int i = 0; i < num_pairs; i++) {
+		xy1_temp = all_split_obs[i * 2].rightCols(2);
+		xy2_temp = all_split_obs[i * 2 + 1].rightCols(2);
+		
+		// Perform RANSAC, receive index of inliers
+		Vanilla_RANSAC(camera_params, xy1_temp, xy2_temp, ransac_conf, outlier_percentage, min_iterations, dThreshold, inliers);
+		// Remove outliers
+		FindInliers(inliers, xy1_temp, xy2_temp, inliers1, inliers2);
+		// Pushback new (only inliers)
+		all_split_obs_inliers.push_back(inliers1);
+		all_split_obs_inliers.push_back(inliers2);
 
-
+	}
+	// Set the split obs to inliers only
+	all_split_obs = all_split_obs_inliers;
 
 }
 ;
@@ -1484,6 +1579,8 @@ void intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation ROP_1,
 	ofstream out;
 	out.open(outfile_name);
 
+	out << "------------------- ROP's -------------------\nROP:\n" << EOP << endl;
+
 	//create the matrix for the unknowns, x,y,z for each point
 	MatrixXd x_unk = MatrixXd::Zero(3, x_obs.rows() / 2);
 
@@ -1811,49 +1908,49 @@ MatrixXd ComputeIntersectionEstimation(MatrixXd xy1, MatrixXd xy2, Matrix3d m_ro
 
 }
 
-RelativeOrientation Approx_Planar(CameraParam cam_params, MatrixXd img_points, MatrixXd obj_points)
-{
-	RelativeOrientation ROP;
-	double x, y, X, Y, Z;
-	//STEP 1: DLT Design Matrix
-	MatrixXd A = MatrixXd::Zero(2 * img_points.rows(), 9);
-	for (int i = 0; i < img_points.rows(); i++) {
-		x = img_points(i, 1);
-		y = img_points(i, 2);
-		X = obj_points(i, 1);
-		Y = obj_points(i, 2);
-		A(i * 2, 0) = X;
-		A(i * 2, 1) = Y;
-		A(i * 2, 2) = 1;
-		A(i * 2, 3) = 0;
-		A(i * 2, 4) = 0;
-		A(i * 2, 5) = 0;
-		A(i * 2, 6) = -x*X;
-		A(i * 2, 7) = -x*Y;
-		A(i * 2, 7) = -x;
-
-		A(i * 2+1, 0) = 0;
-		A(i * 2+1, 1) = 0;
-		A(i * 2+1, 2) = 0;
-		A(i * 2+1, 3) = X;
-		A(i * 2+1, 4) = Y;
-		A(i * 2+1, 5) = 1;
-		A(i * 2+1, 6) = -y*X;
-		A(i * 2+1, 7) = -y*Y;
-		A(i * 2+1, 7) = -y;
-
-	}
-
-
-	//STEP 2: Perform SV Decomp
-
-	JacobiSVD<MatrixXd> svd(A, ComputeFullV);
-	MatrixXd V = svd.matrixV();
-
-	return ROP;
-
-
-}
+//RelativeOrientation Approx_Planar(CameraParam cam_params, MatrixXd img_points, MatrixXd obj_points)
+//{
+//	RelativeOrientation ROP;
+//	double x, y, X, Y, Z;
+//	//STEP 1: DLT Design Matrix
+//	MatrixXd A = MatrixXd::Zero(2 * img_points.rows(), 9);
+//	for (int i = 0; i < img_points.rows(); i++) {
+//		x = img_points(i, 1);
+//		y = img_points(i, 2);
+//		X = obj_points(i, 1);
+//		Y = obj_points(i, 2);
+//		A(i * 2, 0) = X;
+//		A(i * 2, 1) = Y;
+//		A(i * 2, 2) = 1;
+//		A(i * 2, 3) = 0;
+//		A(i * 2, 4) = 0;
+//		A(i * 2, 5) = 0;
+//		A(i * 2, 6) = -x*X;
+//		A(i * 2, 7) = -x*Y;
+//		A(i * 2, 7) = -x;
+//
+//		A(i * 2+1, 0) = 0;
+//		A(i * 2+1, 1) = 0;
+//		A(i * 2+1, 2) = 0;
+//		A(i * 2+1, 3) = X;
+//		A(i * 2+1, 4) = Y;
+//		A(i * 2+1, 5) = 1;
+//		A(i * 2+1, 6) = -y*X;
+//		A(i * 2+1, 7) = -y*Y;
+//		A(i * 2+1, 7) = -y;
+//
+//	}
+//
+//
+//	//STEP 2: Perform SV Decomp
+//
+//	JacobiSVD<MatrixXd> svd(A, ComputeFullV);
+//	MatrixXd V = svd.matrixV();
+//
+//	return ROP;
+//
+//
+//}
 
 MatrixXd Compute_w_int(MatrixXd estimated_xy, MatrixXd xy_1_obs, MatrixXd xy_2_obs, CameraParam params, RelativeOrientation RO1, RelativeOrientation RO2)
 {

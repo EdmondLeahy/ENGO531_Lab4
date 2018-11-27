@@ -3,8 +3,8 @@
 
 double ransac_confidence = 0.99;
 double outlier_percentage = 0.6;
-int min_iterations = 200;
-double dThreshold = 1 * pow(10,-5);
+int min_iterations = 2000;
+double dThreshold = 1 * pow(10,-6);
 double num_pairs = 0;
 vector<RelativeOrientation> ROs;
 CameraParam camera_params;
@@ -14,14 +14,14 @@ MatrixXd Essential_mat;
 int main() {
 
 	//Constants
-	char infile[256] = ".\\AllTies_sparsesift_Kate.txt";
-	MatrixXd tie_pts, obs_01_img0, obs_02_img0, obs_01_img1, obs_12_img1, obs_02_img2, obs_12_img2;
-	
+	char infile[256] = ".\\AllTies_sparsesift.txt";
+	MatrixXd tie_pts, obs_01_img0, obs_02_img0, obs_01_img1, obs_12_img1, obs_02_img2, obs_12_img2, img_pair_indeces;
+	vector<MatrixXd> all_split_obs;
 
 	//Read in matrix
 	Read_Mat(infile, tie_pts);
 	// Define Camera Parameters (JEFF)
-	/*camera_params.PS = 0.008609300;
+	camera_params.PS = 0.008609300;
 	camera_params.Cn = 2592.000000000;
 	camera_params.Rn = 1728.000000000;
 	camera_params.xpp = 0.056678826;
@@ -35,9 +35,9 @@ int main() {
 	camera_params.S1 = -0.002768610675315;
 	camera_params.S2 = -0.001364918105319;
 	camera_params.sigma_obs = 0.8;
-*/
+
 	// Define Camera Parameters (KATE)
-	camera_params.PS = 0.00372;
+	/*camera_params.PS = 0.00372;
 	camera_params.Cn = 6000.0;
 	camera_params.Rn = 4000.0;
 	camera_params.xpp = 0.000165124806008;
@@ -50,71 +50,87 @@ int main() {
 	camera_params.P2 = 0.066758636;
 	camera_params.S1 = 0.162602957;
 	camera_params.S2 = 24.736669359;
-	camera_params.sigma_obs = 0.8;
+	camera_params.sigma_obs = 0.8;*/
 
 
 	//Perform ransac on image pairs:
-	SplitObs_and_RANSAC(camera_params, tie_pts, ransac_confidence, outlier_percentage, min_iterations, dThreshold, num_pairs);
 
-	//Read in the ransacked image obs
-	Read_Mat(".\\Inliers_Img01_0.txt", obs_01_img0);
-	Read_Mat(".\\Inliers_Img02_0.txt", obs_02_img0);
-	Read_Mat(".\\Inliers_Img01_1.txt", obs_01_img1);
-	Read_Mat(".\\Inliers_Img12_1.txt", obs_01_img1);
-	Read_Mat(".\\Inliers_Img02_2.txt", obs_02_img2);
-	Read_Mat(".\\Inliers_Img12_2.txt", obs_12_img2);
+	//SplitObs(camera_params, tie_pts, all_split_obs, img_pair_indeces);
 
-	//Strip the indeces off
-	MatrixXd xy_01_0 = obs_01_img0.rightCols(2);
-	MatrixXd xy_01_1 = obs_01_img0.rightCols(2);
-	MatrixXd xy_12_1 = obs_01_img0.rightCols(2);
-	MatrixXd xy_12_2 = obs_01_img0.rightCols(2);
-	MatrixXd xy_02_0 = obs_01_img0.rightCols(2);
-	MatrixXd xy_02_2 = obs_01_img0.rightCols(2);
+	//Ransac_All_obs(camera_params, all_split_obs, ransac_confidence, outlier_percentage, min_iterations, dThreshold);
+
+	// Write the matrices to files
+	string outfilename;
+	char *outfilechar;
+
+	/*for (int i = 0; i < all_split_obs.size() / 2; i++) {
+
+		outfilename = "Inliers_Pair" + to_string(i) + "_" + to_string(0) + ".txt";
+		outfilechar = new char[outfilename.length() + 1];
+		strcpy(outfilechar, outfilename.c_str());
+		Write_Mat(outfilechar, all_split_obs[i*2], 4);
+
+		outfilename = "Inliers_Pair" + to_string(i) + "_" + to_string(1) + ".txt";
+		outfilechar = new char[outfilename.length() + 1];
+		strcpy(outfilechar, outfilename.c_str());
+		Write_Mat(outfilechar, all_split_obs[i * 2 + 1], 4);
+
+	}*/
 	
+	// ------------------------- DEBUG ------------------------------
+	MatrixXd temp_obs;
+	Read_Mat("Img_pair_indices.txt", img_pair_indeces);
+	Read_Mat("Inliers_Pair0_0.txt", temp_obs);
+	all_split_obs.push_back(temp_obs);
+	Read_Mat("Inliers_Pair0_1.txt", temp_obs);
+	all_split_obs.push_back(temp_obs);
+	Read_Mat("Inliers_Pair1_0.txt", temp_obs);
+	all_split_obs.push_back(temp_obs);
+	Read_Mat("Inliers_Pair1_1.txt", temp_obs);
+	all_split_obs.push_back(temp_obs);
+	Read_Mat("Inliers_Pair2_0.txt", temp_obs);
+	all_split_obs.push_back(temp_obs);
+	Read_Mat("Inliers_Pair2_1.txt", temp_obs);
+	all_split_obs.push_back(temp_obs);
+
+	// -------------------------------------------------------------
+
+
 	//cout << endl << endl << xy_01_0 << endl;
-
-
-	//Find EOP
-	MatrixXd F1, F2, F3, E1, E2, E3;
-	RelativeOrientation Zero, RO1, RO2, RO3;
+	vector<RelativeOrientation> ROs;
+	vector<MatrixXd> F_matrices, E_matrices;
+	RelativeOrientation RO_temp, Zero;
 	Zero.bx = 0;
 	Zero.by = 0;
-	Zero.bz = 0; 
+	Zero.bz = 0;
 	Zero.kappa = 0;
 	Zero.omega = 0;
 	Zero.phi = 0;
-	//First Pair
-	Perform_LinOri(camera_params, xy_01_0, xy_01_1, F1, E1);	
-	cout << "\n\nE:\n" << E1 << "\n\nF:\n" << F1 << endl;
-	Decompose_Essential(camera_params, E1, xy_01_0, xy_01_1, RO1.bx, RO1.by, RO1.bz, RO1.omega, RO1.phi, RO1.kappa);
-	ROs.push_back(RO1);
-	//Second Pair
-	Perform_LinOri(camera_params, xy_02_0, xy_02_2, F2, E2);
-	Decompose_Essential(camera_params, E2, xy_02_0, xy_02_2, RO2.bx, RO2.by, RO2.bz, RO2.omega, RO2.phi, RO2.kappa);
-	ROs.push_back(RO2);
-	////Third Pair
-	//Perform_LinOri(camera_params, xy_12_1, xy_12_2, F3, E3);
-	//Decompose_Essential(camera_params, E2, xy_12_1, xy_12_2, RO3.bx, RO3.by, RO3.bz, RO3.omega, RO3.phi, RO3.kappa);
-	//ROs.push_back(RO3);
+	ROs.push_back(Zero);
+	MatrixXd F, E;
+	for (int j = 0; j < all_split_obs.size() / 2; j++) {
+		// for each pair
+		Perform_LinOri(camera_params, all_split_obs[j*2], all_split_obs[j * 2 + 1], F, E);
+		Decompose_Essential(camera_params, E, all_split_obs[j * 2], all_split_obs[j * 2 + 1], RO_temp.bx, RO_temp.by, RO_temp.bz, RO_temp.omega, RO_temp.phi, RO_temp.kappa);
+		
+		cout << "R0:\n" << RO_temp.bx << endl << RO_temp.by << endl << RO_temp.bz << endl << RO_temp.omega << endl << RO_temp.phi << endl << endl;
+		ROs.push_back(RO_temp);
+		F_matrices.push_back(F);
+		E_matrices.push_back(E);
+
+	}
 
 	cout << "\n\n------------- START INTERSECTION ---------------\n\n";
 
-	cout << "R01:\n" << RO1.bx << endl << RO1.by << endl << RO1.bz << endl << RO1.omega << endl << RO1.phi << endl << endl;
-	cout << "R02:\n" << RO2.bx << endl << RO2.by << endl << RO2.bz << endl << RO2.omega << endl << RO2.phi << endl << endl;
+	string int_outname;
+	for (int i = 0; i < all_split_obs.size() / 2; i++) {
 
-	//Intersection img 1-2
-	intersection(xy_01_0, xy_01_1, Zero, RO1, camera_params, "Intersection_01.txt");
+		cout << "\n\nIntersection: " << i * 2 << " and " << i * 2 + 1 << endl;
+		int_outname = "Intersection_Pair" + to_string(i*2) + "_" + to_string(i*2+1) + ".txt";
+		intersection(all_split_obs[i * 2], all_split_obs[i * 2 + 1], ROs[img_pair_indeces(i,0)], ROs[img_pair_indeces(i, 1)], camera_params, int_outname);
 
-
-	//Intersection img 1-3
-	intersection(xy_02_0, xy_02_2, Zero, RO2, camera_params, "Intersection_02.txt");
-
-
-	//Intersection img 2-3
-	intersection(xy_12_1, xy_12_2, RO1, RO2, camera_params, "Intersection_12.txt");
-
-
+	}
+	cout << endl;
 	system("pause");
 	return 0;
 

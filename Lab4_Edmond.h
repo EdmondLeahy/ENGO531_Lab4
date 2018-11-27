@@ -54,14 +54,16 @@ typedef Matrix<double, 3, 4> Matrix3b4;
 typedef Matrix<double, Dynamic, 2> Matrixdby2;
 typedef Matrix<int, Dynamic, 2> Matrixdby2i;
 
-void perform_Ransac_RO(int pair, MatrixXd xy_1, MatrixXd xy_2, int img_number1, int img_number2);
+
 
 // Read and write function are modified versions of DMP_BBO library (TAKEN FROM DR.SHAHBAZI)
 void Read_Mat(char *FileName, MatrixXd& m);//reads a formatted file to a matrix
+
 void Write_Mat(char *FileName, MatrixXd & m, int decimal_precision); //writes a matrix to a formatted file
 
+void SplitObs(CameraParam camera_params, MatrixXd tie_pts, vector<MatrixXd>& all_split_obs, MatrixXd& img_indeces);
 
-void SplitObs_and_RANSAC(CameraParam camera_params, MatrixXd tie_pts, double ransac_conf, double outlier_percentage, double min_iterations, double dThreshold, double& pair_counter);
+void Ransac_All_obs(CameraParam camera_params, vector<MatrixXd>& all_split_obs, double ransac_conf, double outlier_percentage, double min_iterations, double dThreshold);
 
 void Rotation_g2i(double Omega, double Phi, double Kappa, Matrix3b3 & Rot_g2i);
 
@@ -79,8 +81,6 @@ bool Perform_NonlinOri(CameraParam& camera_params, MatrixXd &xy_i1, MatrixXd &xy
 void Vanilla_RANSAC(CameraParam camera_params, MatrixXd &xy_i1, MatrixXd &xy_i2, double confidence_level, double outlier_percentage, int min_iterations, double dThreshold, MatrixXd& Inliers_index);
 
 void FindInliers(MatrixXd inliers, MatrixXd all_ties_1, MatrixXd all_ties_2, MatrixXd &inlier_ties1, MatrixXd &inlier_ties2);
-
-// void intersection(CameraParam camera_params, MatrixXd xy_img1, MatrixXd xy_img2, MatrixXd xy_img3, RelativeOrientation RO1, RelativeOrientation RO2, RelativeOrientation RO3);
 
 void intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation ROP_1, RelativeOrientation ROP_2, CameraParam cam_params, string outfile_name);
 
@@ -102,6 +102,5 @@ MatrixXd Compute_A_int(MatrixXd x_est, CameraParam params, RelativeOrientation R
 
 MatrixXd ComputeIntersectionEstimation(MatrixXd xy1, MatrixXd xy2, Matrix3d m_rot, double c, RelativeOrientation RO1, RelativeOrientation RO2, RelativeOrientation RO3);
 
-RelativeOrientation Approx_Planar(CameraParam cam_params, MatrixXd img_points, MatrixXd obj_points);
 
 #endif
