@@ -3,7 +3,7 @@
 
 double ransac_confidence = 0.99;
 double outlier_percentage = 0.6;
-int min_iterations = 2000;
+int min_iterations = 20;
 double dThreshold = 1 * pow(10,-5);
 double num_pairs = 0;
 vector<RelativeOrientation> ROs;
@@ -55,30 +55,30 @@ int main() {
 
 	//----------------------Perform ransac on image pairs:
 
-	SplitObs(camera_params, tie_pts, all_split_obs, img_pair_indeces);
+	//SplitObs(camera_params, tie_pts, all_split_obs, img_pair_indeces);
 
-	Ransac_All_obs(camera_params, all_split_obs, ransac_confidence, outlier_percentage, min_iterations, dThreshold);
+	//Ransac_All_obs(camera_params, all_split_obs, ransac_confidence, outlier_percentage, min_iterations, dThreshold);
 
 	//--------------------- Write the matrices to files
 	string outfilename;
 	char *outfilechar;
 
-	for (int i = 0; i < all_split_obs.size() / 2; i++) {
+	//for (int i = 0; i < all_split_obs.size() / 2; i++) {
 
-		outfilename = "Inliers_Pair" + to_string(i) + "_" + to_string(0) + ".txt";
-		outfilechar = new char[outfilename.length() + 1];
-		strcpy(outfilechar, outfilename.c_str());
-		Write_Mat(outfilechar, all_split_obs[i*2], 4);
+	//	outfilename = "Inliers_Pair" + to_string(i) + "_" + to_string(0) + ".txt";
+	//	outfilechar = new char[outfilename.length() + 1];
+	//	strcpy(outfilechar, outfilename.c_str());
+	//	Write_Mat(outfilechar, all_split_obs[i*2], 4);
 
-		outfilename = "Inliers_Pair" + to_string(i) + "_" + to_string(1) + ".txt";
-		outfilechar = new char[outfilename.length() + 1];
-		strcpy(outfilechar, outfilename.c_str());
-		Write_Mat(outfilechar, all_split_obs[i * 2 + 1], 4);
+	//	outfilename = "Inliers_Pair" + to_string(i) + "_" + to_string(1) + ".txt";
+	//	outfilechar = new char[outfilename.length() + 1];
+	//	strcpy(outfilechar, outfilename.c_str());
+	//	Write_Mat(outfilechar, all_split_obs[i * 2 + 1], 4);
 
-	}
-	
+	//}
+	//
 	// ------------------------- DEBUG ------------------------------
-	/*MatrixXd temp_obs;
+	MatrixXd temp_obs;
 	Read_Mat("Img_pair_indices.txt", img_pair_indeces);
 	Read_Mat("Inliers_Pair0_0.txt", temp_obs);
 	all_split_obs.push_back(temp_obs);
@@ -91,7 +91,7 @@ int main() {
 	Read_Mat("Inliers_Pair2_0.txt", temp_obs);
 	all_split_obs.push_back(temp_obs);
 	Read_Mat("Inliers_Pair2_1.txt", temp_obs);
-	all_split_obs.push_back(temp_obs);*/
+	all_split_obs.push_back(temp_obs);
 
 	// ------------------------ SHAHBAZI EXAMPLE DATA -------------------------------------
 	//vector<MatrixXd> example_split_obs;
@@ -132,13 +132,21 @@ int main() {
 	Zero.omega = 0;
 	Zero.phi = 0;
 	ROs.push_back(Zero);
-	MatrixXd F, E;
+	MatrixXd F, E, T21;
 	for (int j = 0; j < all_split_obs.size() / 2; j++) {
 		// for each pair
+
+		T21 = MatrixXd::Zero(3, 1);
+		T21 << RO_temp.bx,
+			 RO_temp.by,
+			RO_temp.bz;
+		
 		Perform_LinOri(camera_params, all_split_obs[j*2], all_split_obs[j * 2 + 1], F, E);
 		Decompose_Essential(camera_params, E, all_split_obs[j * 2], all_split_obs[j * 2 + 1], RO_temp.bx, RO_temp.by, RO_temp.bz, RO_temp.omega, RO_temp.phi, RO_temp.kappa);
+		Perform_NonlinOri(camera_params, all_split_obs[j * 2], all_split_obs[j * 2 + 1], T21, RO_temp.bx, RO_temp.by, RO_temp.bz, RO_temp.omega, RO_temp.phi, RO_temp.kappa);
 		
 		cout << "R0:\n" << RO_temp.bx << endl << RO_temp.by << endl << RO_temp.bz << endl << RO_temp.omega << endl << RO_temp.phi << endl << endl;
+		cout << "E:\n" << E << endl << "F:\n" << F << endl;
 		ROs.push_back(RO_temp);
 		F_matrices.push_back(F);
 		E_matrices.push_back(E);
