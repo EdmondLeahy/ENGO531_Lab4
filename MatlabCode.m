@@ -5,10 +5,21 @@
 
 close all
 
-obs1 = load('Inliers_Pair0_0.txt');
-scatter(obs1(:,1), obs1(:,2), '*')
+img_1 = imread('IM_01.jpg');
+
+
+minx = 0;
+miny = 0;
+maxx =2592;
+maxy =1728;
+
+imagesc([minx maxx], [miny maxy], img_1)
+
 hold on
 grid on
+
+obs1 = load('Inliers_Pair0_0.txt');
+scatter(obs1(:,1), obs1(:,2), '*')
 %obs1 = load('Inliers_Pair0_1.txt');
 %scatter(obs1(:,1), obs1(:,2) , '*')
 
@@ -30,12 +41,10 @@ figure()
 hold on
 grid on
 
-plot3(ROPs(1,1),ROPs(2,1),ROPs(3,1), '*')
-plot3(ROPs(1,2),ROPs(2,2),ROPs(3,2), '*')
-plot3(ROPs(1,3),ROPs(2,2),ROPs(3,3), '*')
-figure()
-hold on
-grid on
+scatter3(ROPs(1,1),ROPs(2,1),ROPs(3,1), '*')
+scatter3(ROPs(1,2),ROPs(2,2),ROPs(3,2), '*')
+scatter3(ROPs(1,3),ROPs(2,2),ROPs(3,3), '*')
+
 scatter3(obs1(:,1), obs1(:,2), obs1(:,3), '*');
 scatter3(obs2(:,1), obs2(:,2), obs2(:,3), '*');
 scatter3(obs3(:,1), obs3(:,2), obs3(:,3), '*');
