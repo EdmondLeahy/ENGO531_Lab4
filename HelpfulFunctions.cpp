@@ -1549,7 +1549,7 @@ void FindInliers(MatrixXd inliers, MatrixXd all_ties_1, MatrixXd all_ties_2, Mat
 };
 
 
-void intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation ROP_1, RelativeOrientation ROP_2, CameraParam cam_params, string outfile_name) {
+MatrixXd intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation ROP_1, RelativeOrientation ROP_2, CameraParam cam_params, string outfile_name) {
 	int n_points = x_obs_1.rows(); //number of points in the intersection
 
 
@@ -1682,6 +1682,8 @@ void intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation ROP_1,
 	out << "----------\n" << "FINAL POINTS: \n" << ComputedPoints << "\n\n----------\n";
 
 	out.close();
+
+	return ComputedPoints;
 
 }
 VectorXd calculatePlane(MatrixXd Points3)

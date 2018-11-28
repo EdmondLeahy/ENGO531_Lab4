@@ -82,7 +82,7 @@ void Vanilla_RANSAC(CameraParam camera_params, MatrixXd &xy_i1, MatrixXd &xy_i2,
 
 void FindInliers(MatrixXd inliers, MatrixXd all_ties_1, MatrixXd all_ties_2, MatrixXd &inlier_ties1, MatrixXd &inlier_ties2);
 
-void intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation ROP_1, RelativeOrientation ROP_2, CameraParam cam_params, string outfile_name);
+MatrixXd intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation ROP_1, RelativeOrientation ROP_2, CameraParam cam_params, string outfile_name);
 
 VectorXd calculatePlane(MatrixXd Points3);
 

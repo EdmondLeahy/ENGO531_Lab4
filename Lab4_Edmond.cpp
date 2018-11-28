@@ -4,7 +4,7 @@
 double ransac_confidence = 0.99;
 double outlier_percentage = 0.6;
 int min_iterations = 2000;
-double dThreshold = 1 * pow(10,-6);
+double dThreshold = 1 * pow(10,-5);
 double num_pairs = 0;
 vector<RelativeOrientation> ROs;
 CameraParam camera_params;
@@ -20,7 +20,7 @@ int main() {
 
 	//Read in matrix
 	Read_Mat(infile, tie_pts);
-	// Define Camera Parameters (JEFF)
+	//Define Camera Parameters (JEFF)
 	camera_params.PS = 0.008609300;
 	camera_params.Cn = 2592.000000000;
 	camera_params.Rn = 1728.000000000;
@@ -53,17 +53,17 @@ int main() {
 	camera_params.sigma_obs = 0.8;*/
 
 
-	//Perform ransac on image pairs:
+	//----------------------Perform ransac on image pairs:
 
-	//SplitObs(camera_params, tie_pts, all_split_obs, img_pair_indeces);
+	SplitObs(camera_params, tie_pts, all_split_obs, img_pair_indeces);
 
-	//Ransac_All_obs(camera_params, all_split_obs, ransac_confidence, outlier_percentage, min_iterations, dThreshold);
+	Ransac_All_obs(camera_params, all_split_obs, ransac_confidence, outlier_percentage, min_iterations, dThreshold);
 
-	// Write the matrices to files
+	//--------------------- Write the matrices to files
 	string outfilename;
 	char *outfilechar;
 
-	/*for (int i = 0; i < all_split_obs.size() / 2; i++) {
+	for (int i = 0; i < all_split_obs.size() / 2; i++) {
 
 		outfilename = "Inliers_Pair" + to_string(i) + "_" + to_string(0) + ".txt";
 		outfilechar = new char[outfilename.length() + 1];
@@ -75,10 +75,10 @@ int main() {
 		strcpy(outfilechar, outfilename.c_str());
 		Write_Mat(outfilechar, all_split_obs[i * 2 + 1], 4);
 
-	}*/
+	}
 	
 	// ------------------------- DEBUG ------------------------------
-	MatrixXd temp_obs;
+	/*MatrixXd temp_obs;
 	Read_Mat("Img_pair_indices.txt", img_pair_indeces);
 	Read_Mat("Inliers_Pair0_0.txt", temp_obs);
 	all_split_obs.push_back(temp_obs);
@@ -91,7 +91,32 @@ int main() {
 	Read_Mat("Inliers_Pair2_0.txt", temp_obs);
 	all_split_obs.push_back(temp_obs);
 	Read_Mat("Inliers_Pair2_1.txt", temp_obs);
-	all_split_obs.push_back(temp_obs);
+	all_split_obs.push_back(temp_obs);*/
+
+	// ------------------------ SHAHBAZI EXAMPLE DATA -------------------------------------
+	//vector<MatrixXd> example_split_obs;
+	////Read in data
+	//MatrixXd example_data, data_l, data_r, fun, Ex_e;
+	//RelativeOrientation Ex_RO, Zero;
+	//Zero.bx = 0;
+	//Zero.by = 0;
+	//Zero.bz = 0;
+	//Zero.kappa = 0;
+	//Zero.omega = 0;
+	//Zero.phi = 0;;
+	//Read_Mat("AllTies_Shahbazi_Example.txt", example_data);
+	////Split into two matrices
+	//example_split_obs.push_back(example_data.leftCols(2));
+	//example_split_obs.push_back(example_data.rightCols(2));
+
+	////ROP
+	//Perform_LinOri(camera_params, example_split_obs[0], example_split_obs[1], fun, Ex_e);
+	//Decompose_Essential(camera_params, Ex_e, example_split_obs[0], example_split_obs[1], Ex_RO.bx, Ex_RO.by, Ex_RO.bz, Ex_RO.omega, Ex_RO.phi, Ex_RO.kappa);
+
+	//intersection(example_split_obs[0], example_split_obs[1], Zero, Ex_RO, camera_params, "EXAMPLE_TEST.txt");
+
+
+
 
 	// -------------------------------------------------------------
 
@@ -122,13 +147,17 @@ int main() {
 
 	cout << "\n\n------------- START INTERSECTION ---------------\n\n";
 
-	string int_outname;
+	string int_outname1, int_outname2;
+	char *x_obs_char;
+	MatrixXd x_obs;
 	for (int i = 0; i < all_split_obs.size() / 2; i++) {
 
 		cout << "\n\nIntersection: " << i * 2 << " and " << i * 2 + 1 << endl;
-		int_outname = "Intersection_Pair" + to_string(i*2) + "_" + to_string(i*2+1) + ".txt";
-		intersection(all_split_obs[i * 2], all_split_obs[i * 2 + 1], ROs[img_pair_indeces(i,0)], ROs[img_pair_indeces(i, 1)], camera_params, int_outname);
-
+		int_outname1 = "Intersection_Pair" + to_string((int)img_pair_indeces(i, 0)) + "_" + to_string((int)img_pair_indeces(i, 1)) + ".txt";
+		x_obs = intersection(all_split_obs[i * 2], all_split_obs[i * 2 + 1], ROs[img_pair_indeces(i,0)], ROs[img_pair_indeces(i, 1)], camera_params, int_outname1);
+		int_outname1 = "Intersection_Pair" + to_string((int)img_pair_indeces(i, 0)) + "_" + to_string((int)img_pair_indeces(i, 1)) + "_FINAL_Obs.txt";
+		x_obs_char = &int_outname1[0u];
+		Write_Mat(x_obs_char, x_obs, 7);
 	}
 	cout << endl;
 	system("pause");
