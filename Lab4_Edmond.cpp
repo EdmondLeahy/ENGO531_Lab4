@@ -3,7 +3,7 @@
 
 double ransac_confidence = 0.99;
 double outlier_percentage = 0.6;
-int min_iterations = 20;
+int min_iterations = 2000;
 double dThreshold = 1 * pow(10,-5);
 double num_pairs = 0;
 vector<RelativeOrientation> ROs;
@@ -36,22 +36,6 @@ int main() {
 	camera_params.S2 = -0.001364918105319;
 	camera_params.sigma_obs = 0.8;
 
-	// Define Camera Parameters (KATE)
-	/*camera_params.PS = 0.00372;
-	camera_params.Cn = 6000.0;
-	camera_params.Rn = 4000.0;
-	camera_params.xpp = 0.000165124806008;
-	camera_params.ypp = - 0.000000237476973;
-	camera_params.f_l = 0.000000000062796;
-	camera_params.K1 = -0.000011690064009;
-	camera_params.K2 = -0.000006395424825;
-	camera_params.K3 = -0.000047133657656;
-	camera_params.P1 = -0.000014234944030;
-	camera_params.P2 = 0.066758636;
-	camera_params.S1 = 0.162602957;
-	camera_params.S2 = 24.736669359;
-	camera_params.sigma_obs = 0.8;*/
-
 
 	//----------------------Perform ransac on image pairs:
 
@@ -59,7 +43,7 @@ int main() {
 
 	//Ransac_All_obs(camera_params, all_split_obs, ransac_confidence, outlier_percentage, min_iterations, dThreshold);
 
-	//--------------------- Write the matrices to files
+	//--------------------- Write the matrices to files:
 	string outfilename;
 	char *outfilechar;
 
@@ -92,36 +76,9 @@ int main() {
 	all_split_obs.push_back(temp_obs);
 	Read_Mat("Inliers_Pair2_1.txt", temp_obs);
 	all_split_obs.push_back(temp_obs);
-
-	// ------------------------ SHAHBAZI EXAMPLE DATA -------------------------------------
-	//vector<MatrixXd> example_split_obs;
-	////Read in data
-	//MatrixXd example_data, data_l, data_r, fun, Ex_e;
-	//RelativeOrientation Ex_RO, Zero;
-	//Zero.bx = 0;
-	//Zero.by = 0;
-	//Zero.bz = 0;
-	//Zero.kappa = 0;
-	//Zero.omega = 0;
-	//Zero.phi = 0;;
-	//Read_Mat("AllTies_Shahbazi_Example.txt", example_data);
-	////Split into two matrices
-	//example_split_obs.push_back(example_data.leftCols(2));
-	//example_split_obs.push_back(example_data.rightCols(2));
-
-	////ROP
-	//Perform_LinOri(camera_params, example_split_obs[0], example_split_obs[1], fun, Ex_e);
-	//Decompose_Essential(camera_params, Ex_e, example_split_obs[0], example_split_obs[1], Ex_RO.bx, Ex_RO.by, Ex_RO.bz, Ex_RO.omega, Ex_RO.phi, Ex_RO.kappa);
-
-	//intersection(example_split_obs[0], example_split_obs[1], Zero, Ex_RO, camera_params, "EXAMPLE_TEST.txt");
-
-
-
-
 	// -------------------------------------------------------------
-
-
-	//cout << endl << endl << xy_01_0 << endl;
+	
+	//--------------------- Find Relative Orientation:
 	vector<RelativeOrientation> ROs;
 	vector<MatrixXd> F_matrices, E_matrices;
 	RelativeOrientation RO_temp, Zero;
@@ -146,13 +103,16 @@ int main() {
 		Perform_NonlinOri(camera_params, all_split_obs[j * 2], all_split_obs[j * 2 + 1], T21, RO_temp.bx, RO_temp.by, RO_temp.bz, RO_temp.omega, RO_temp.phi, RO_temp.kappa);
 		
 		cout << "R0:\n" << RO_temp.bx << endl << RO_temp.by << endl << RO_temp.bz << endl << RO_temp.omega << endl << RO_temp.phi << endl << endl;
-		cout << "E:\n" << E << endl << "F:\n" << F << endl;
+		cout << "\nE:\n" << E << endl << "F:\n" << F << endl;
 		ROs.push_back(RO_temp);
 		F_matrices.push_back(F);
 		E_matrices.push_back(E);
 
 	}
 
+
+
+	//--------------------- Perform Intersection:
 	cout << "\n\n------------- START INTERSECTION ---------------\n\n";
 
 	string int_outname1, int_outname2;

@@ -1552,7 +1552,6 @@ void FindInliers(MatrixXd inliers, MatrixXd all_ties_1, MatrixXd all_ties_2, Mat
 MatrixXd intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation ROP_1, RelativeOrientation ROP_2, CameraParam cam_params, string outfile_name) {
 	int n_points = x_obs_1.rows(); //number of points in the intersection
 
-
 	//EOP
 	MatrixXd EOP(6,2); //Both EOP in one matrix (Xc, Yc, Zc, omega, phi, kappa)
 	EOP(0, 0) = ROP_1.bx; 
@@ -1572,7 +1571,7 @@ MatrixXd intersection(MatrixXd x_obs_1, MatrixXd x_obs_2, RelativeOrientation RO
 	// x_obs
 	//combine the observations in correct manner
 	MatrixXd x_obs(2*n_points,2); 
-	x_obs = merge_Xobs(x_obs_1, x_obs_2);
+	x_obs = merge_Xobs(x_obs_1, x_obs_2, cam_params);
 
 
 	//output file
@@ -1807,16 +1806,20 @@ MatrixXd Compute_w(MatrixXd x_unk, MatrixXd ML, MatrixXd MR, double c, MatrixXd 
 	return w;
 }
 
-MatrixXd merge_Xobs(MatrixXd x1, MatrixXd x2)
+MatrixXd merge_Xobs(MatrixXd x1, MatrixXd x2, CameraParam cam_params)
 {
+
+	double Cx = (-cam_params.Cn / 2 + 0.5)*cam_params.PS - cam_params.xpp;
+	double Cy = -(-cam_params.Rn / 2 + 0.5)*cam_params.PS - cam_params.ypp;
+
 	MatrixXd x_obs(2*x1.rows(),2);
 
 	for (int i = 0; i < x1.rows(); i++) {
-		x_obs(i * 2, 0) = x1(i, 0);   //First image obs
-		x_obs(i * 2, 1) = x1(i, 1);
+		x_obs(i * 2, 0) = x1(i, 0)*cam_params.PS - Cx;   //First image obs (in m!)
+		x_obs(i * 2, 1) = x1(i, 1)*cam_params.PS - Cy;
 
-		x_obs(i * 2 + 1, 0) = x2(i, 0); //second image obs
-		x_obs(i * 2 + 1, 1) = x2(i, 1);
+		x_obs(i * 2 + 1, 0) = x2(i, 0)*cam_params.PS - Cx; //second image obs (in m!)
+		x_obs(i * 2 + 1, 1) = x2(i, 1)*cam_params.PS - Cy;
 
 	}
 	

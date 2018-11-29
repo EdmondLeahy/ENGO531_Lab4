@@ -96,7 +96,7 @@ MatrixXd Compute_A(MatrixXd x_unk, MatrixXd ML, MatrixXd MR, double c, MatrixXd 
 
 MatrixXd Compute_w(MatrixXd x_unk, MatrixXd ML, MatrixXd MR, double c, MatrixXd x_c);
 
-MatrixXd merge_Xobs(MatrixXd x1, MatrixXd x2);
+MatrixXd merge_Xobs(MatrixXd x1, MatrixXd x2, CameraParam cam_params);
 
 MatrixXd Compute_A_int(MatrixXd x_est, CameraParam params, RelativeOrientation RO1, RelativeOrientation RO2);
 
